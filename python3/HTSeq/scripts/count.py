@@ -1,73 +1,14 @@
-# testrun:
-#           allelic_count.py --SNP-allelic-analysis --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
-#
-# python3 allelic_count.py --SNP-allelic-analysis --SNP-fast-vcf-reader --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
-#
-# CONSISTENCY TEST
-#
-# python3 allelic_count.py --check-consistency --num-consistency-tests=100000 --genome-fasta-filename=/home/linux/RNAseq/Mus_musculus.GRCm38.68.dna.toplevel.fa/Mus_musculus.GRCm38.68.dna.chromosome.1.fa --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-vcf-file-offset=1 /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
-# for checking VCF file only use:
-# python3 allelic_count.py --check-consistency --num-consistency-tests=100000 --genome-fasta-filename=/home/linux/RNAseq/Mus_musculus.GRCm38.68.dna.toplevel.fa/Mus_musculus.GRCm38.68.dna.chromosome.1.fa --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-vcf-file-offset=1 None None
-#
-# 15951727 SNPs found in 92510146 vcf records
-# SNP information written to BED cache file /home/linux/RNAseq/SNPs_NEW.bed
-# OLD:
-# It seem to work but there is a problem with the CAST reads!
-#
-# 33874599 alignments  processed.
-# Polymorphism report: 3397358 assigned: 3392173 reference / 5185 CAST, 5398878 alleles unassigned of 8796236 tested.
-#
-#                     4375382 ref, 6113 CAST, 2706 unassigned SNPs total
-#
-# With -1/+1 extended cigarop.ref_iv a few more SNPs are found - is not from double counting as reads are assigned by voting and double votes do not increase assignments
-#
-# 33874599 alignments  processed.
-# Polymorphism report: 3397393 assigned: 3391962 reference / 5431 CAST, 5398843 alleles unassigned of 8796236 tested.
-#
-#                     4375874 ref, 11047 CAST, 4550 unassigned SNPs total
-#
-# With also -1/+1 extended cigarop.iv for quick testing if SNPs overlap read alignment interval even a very few more turn up
-# - note that the reference does not get any more as SNPs match on ref genome, but CAST does get some as these are mismatches that are not included in M operations
-# - also a few more unassigned SNPs
-#
-# 33874599 alignments  processed.
-# Polymorphism report: 3398038 assigned: 3391962 reference / 6076 CAST, 5433209 alleles unassigned of 8831247 tested.
-#
-#                     4375874 ref, 11692 CAST, 5614 unassigned SNPs total
-#
-# TXGFPCASTHIRAKOnodox.sa dataset contains CAST genome, analysis shows a small (10.6%, SNPs, 9.3% reads) underrepresentation of CAST (which maybe the missing Xcast chromosome?)
-#
-# testrun:
-#           count_with_alleles.py --allelic-analysis --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output TXGFPCASTHIRAKOnodox_alleleic_counts /home/linux/RNAseq/Fastq/TXGFPCASTHIRAKOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
-#
-# 31955143 alignments  processed.
-# Polymorphism report: 3269872 assigned: 1786378 reference / 1483494 CAST, 5394715 alleles unassigned of 8664587 tested.
-#
-#                     2298694 ref, 1857067 CAST, 5587 unassigned SNPs total
-#
-#           count_with_alleles.py --allelic-analysis --additional-attr=gene_name --add-chromosome-information --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output TXGFPCASTHIRAKOnodox_alleleic_counts /home/linux/RNAseq/Fastq/TXGFPCASTHIRAKOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
-
-# HTSeq vcf reader 18:57 - 21:13 15951727 SNPs found in 92510146 vcf records - 2 hours and 15 minutes
-# fast vcf reader  21:22 - 21:47 15955367 Polymorphisms selected in 92510146 vcf records. - 25 minutes
-# bed read 21:53 - 21:54 - 1 minute only
-# GFT read 21:54 - 21:55 - 1 minute only
-# BAM proc 21:55 - 22:32 - 37 minutes
-# 33874599 alignments  processed.
-# Polymorphism report: 3398038 assigned: 3391962 reference / 6076 alternate, 5433209 alleles unassigned of 8831247 tested.
-
-
 import sys
 import argparse
 import operator
 import itertools
 import warnings
 import traceback
+import os
 import os.path
 import multiprocessing
 import pysam
 import random
-import os
-import sys
 
 import HTSeq
 
@@ -224,6 +165,7 @@ def count_reads_single_file(
         samout_filename,
         allele_counts,   # <---------------------------------- allelic analysis
         SNPs,
+        snp_min_qual,
         ):
 
     def write_to_samout(r, assignment, samoutfile, template=None):
@@ -494,17 +436,20 @@ def count_reads_single_file(
                                                     # ---------------------------------------------------------------------------------------------------------------
                                                     for snp_iv, snp in [ (iv,s) for iv,s in SNPs[op.ref_iv].steps() if s != 0  ]: # steps with 0 at end of snp_iv are omitted
                                                         for snp_pos in snp_iv.range(step=1):                            # iterate over all positions in snp_iv
-                                                            read_snp = check_ref_alt(chr(r.read_as_aligned.seq[op.query_from + snp_pos.start - op.ref_iv.start]).upper(), snp)
-                                                            if read_snp == "ref":
-                                                                ref_snps += 1
-                                                            elif read_snp == "alt":
-                                                                alt_snps += 1
+                                                            if snp_min_qual == 0 or r.read_as_aligned.qual[op.query_from + snp_pos.start - op.ref_iv.start] >= snp_min_qual:
+                                                                read_snp = check_ref_alt(chr(r.read_as_aligned.seq[op.query_from + snp_pos.start - op.ref_iv.start]).upper(), snp)
+                                                                if read_snp == "ref":
+                                                                    ref_snps += 1
+                                                                elif read_snp == "alt":
+                                                                    alt_snps += 1
+                                                                else:
+                                                                    print("UNASSIGNED", read_snp, bin(snp), chr(r.read_as_aligned.seq[op.query_from + snp_pos.start - op.ref_iv.start]).upper())
+                                                                    unassigned += 1
+                                                                # not needed - see above
+                                                                # else: handle antisense strand using SequenceWithQualities.get_reverse_complement:
+                                                                #     read_seq = r.read.get_reverse_complement() / check if quals need also inverted !!!!!
                                                             else:
-                                                                print("UNASSIGNED", read_snp, bin(snp), chr(r.read_as_aligned.seq[op.query_from + snp_pos.start - op.ref_iv.start]).upper())
                                                                 unassigned += 1
-                                                            # not needed - see above
-                                                            # else: handle antisense strand using SequenceWithQualities.get_reverse_complement:
-                                                            #     read_seq = r.read.get_reverse_complement() / check if quals need also inverted !!!!!
                                                 else:
                                                     print("WARNING found op.size==0; op.type =", op.type)
                                         alt_total += alt_snps
@@ -600,6 +545,7 @@ def count_reads_in_features(
         feature_query,
         allele_counts,                           # <--------------------------allelic analysis
         SNPs,
+        snp_min_qual,
         add_chromosome_information,
         ):
     '''Count reads in features, parallelizing by file'''
@@ -726,6 +672,7 @@ def count_reads_in_features(
             samout_filename,
             allele_counts,
             SNPs,
+            snp_min_qual,
             ))
 
     # Count reads
@@ -1171,6 +1118,15 @@ def main():
             help="include chromosome information in output")
 
     pa.add_argument(
+            "--SNP-min-base-qual", type=int, dest="snp_min_qual",
+            default=0,
+            help="Select the minimum quality of the read sequence at the position of the polymorphic basepair." +
+            "Default is --SNP-min-base-qual=0 and will accept any quality. If a higher quality is specified " +
+            "than the read base quality the SNP will not be used for allelic count. The total (non allelic " +
+            "read count is unaffected by this option."
+            )
+
+    pa.add_argument(
             "--SNP-omit-ref-genome", action="store_true", dest="omit_ref_genome",
             help="Do not include the reference genome sequence as a reference sample")
 
@@ -1349,6 +1305,7 @@ def main():
             args.feature_query,
             args.allele_counts,    # <------------------------------------------------- allelic analysis
             SNPs,
+            args.snp_min_qual,
             args.add_chromosome_information,
             )
     except:
