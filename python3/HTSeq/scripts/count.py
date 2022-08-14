@@ -1,3 +1,91 @@
+# NOTES:
+# latest commit changed sequences in chromosomes dictionary to bytearray from bytes (bytestrings) for making N-masking genome more efficient
+# should not have broken things hopefully
+
+VCF_FILENAME = "/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf"
+BED_FILENAME = "/home/linux/RNAseq/SNPs.bed"
+
+# Some example commandline invokations using python3 to illustrate use and expected results below.
+# testrun:
+#           allelic_count.py --SNP-allelic-analysis --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#
+# python3 allelic_count.py --SNP-allelic-analysis --SNP-fast-vcf-reader --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#
+# CONSISTENCY TEST
+#
+# python3 allelic_count.py --check-consistency --num-consistency-tests=100000 --genome-fasta-filename=/home/linux/RNAseq/Mus_musculus.GRCm38.68.dna.toplevel.fa/Mus_musculus.GRCm38.68.dna.chromosome.1.fa --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-vcf-file-offset=1 /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+# for checking VCF file only use:
+# python3 allelic_count.py --check-consistency --num-consistency-tests=100000 --genome-fasta-filename=/home/linux/RNAseq/Mus_musculus.GRCm38.68.dna.toplevel.fa/Mus_musculus.GRCm38.68.dna.chromosome.1.fa --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-vcf-file-offset=1 None None
+#
+# 15951727 SNPs found in 92510146 vcf records
+# SNP information written to BED cache file /home/linux/RNAseq/SNPs_NEW.bed
+# OLD:
+# It seem to work but there is a problem with the CAST reads!
+#
+# 33874599 alignments  processed.
+# Polymorphism report: 3397358 assigned: 3392173 reference / 5185 CAST, 5398878 alleles unassigned of 8796236 tested.
+#
+#                     4375382 ref, 6113 CAST, 2706 unassigned SNPs total
+#
+# With -1/+1 extended cigarop.ref_iv a few more SNPs are found - is not from double counting as reads are assigned by voting and double votes do not increase assignments
+#
+# 33874599 alignments  processed.
+# Polymorphism report: 3397393 assigned: 3391962 reference / 5431 CAST, 5398843 alleles unassigned of 8796236 tested.
+#
+#                     4375874 ref, 11047 CAST, 4550 unassigned SNPs total
+#
+# With also -1/+1 extended cigarop.iv for quick testing if SNPs overlap read alignment interval even a very few more turn up
+# - note that the reference does not get any more as SNPs match on ref genome, but CAST does get some as these are mismatches that are not included in M operations
+# - also a few more unassigned SNPs
+#
+# 33874599 alignments  processed.
+# Polymorphism report: 3398038 assigned: 3391962 reference / 6076 CAST, 5433209 alleles unassigned of 8831247 tested.
+#
+#                     4375874 ref, 11692 CAST, 5614 unassigned SNPs total
+#
+# TXGFPCASTHIRAKOnodox.sa dataset contains CAST genome, analysis shows a small (10.6%, SNPs, 9.3% reads) underrepresentation of CAST (which maybe the missing Xcast chromosome?)
+#
+# testrun:
+#           count_with_alleles.py --allelic-analysis --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output TXGFPCASTHIRAKOnodox_alleleic_counts /home/linux/RNAseq/Fastq/TXGFPCASTHIRAKOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#
+# 31955143 alignments  processed.
+# Polymorphism report: 3269872 assigned: 1786378 reference / 1483494 CAST, 5394715 alleles unassigned of 8664587 tested.
+#
+#                     2298694 ref, 1857067 CAST, 5587 unassigned SNPs total
+#
+#           count_with_alleles.py --allelic-analysis --additional-attr=gene_name --add-chromosome-information --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output TXGFPCASTHIRAKOnodox_alleleic_counts /home/linux/RNAseq/Fastq/TXGFPCASTHIRAKOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#
+# ADD FEATURE --SNP-min-base-qual ------------------------------------------------------------------------------------------------------------
+#
+# SNP min base qual 30
+#
+# python3 allelic_count.py --SNP-allelic-analysis --SNP-fast-vcf-reader --SNP-min-base-qual=30 --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#3 3874599 alignments  processed.
+#Polymorphism report: 3257794 assigned: 3252199 reference / 5595 alternate, 5573453 alleles unassigned of 8831247 tested.
+#
+#                     4156672 ref, 10540 alt, 225968 unassigned SNPs total
+#
+# SNP min base qual 25
+#
+# python3 allelic_count.py --SNP-allelic-analysis --SNP-fast-vcf-reader --SNP-min-base-qual=25 --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-bed-filename=/home/linux/RNAseq/SNPs_NEW.bed --SNP-use-bed-file-cache --SNP-ref-sample=129S1_SvImJ --SNP-ref-sample=129S5SvEvBrd --SNP-ref-sample=C57BL_6NJ --SNP-ref-sample=CBA_J --SNP-ref-sample=DBA_2J --SNP-alt-sample=CAST_EiJ --SNP-force-biallelic --additional-attr=gene_name --format=sam --mode=union --stranded=reverse --minaqual=2 --counts_output=HATXCDK8KOnodox_alleleic_counts_NEW /home/linux/RNAseq/Fastq/HATXCDK8KOnodox.sa /home/linux/RNAseq/Mus_musculus.GRCm38.68.gtf
+#
+# 33874599 alignments  processed.
+# Polymorphism report: 3356331 assigned: 3350600 reference / 5731 alternate, 5474916 alleles unassigned of 8831247 tested.
+#
+#                     4310315 ref, 10982 alt, 71883 unassigned SNPs total
+
+
+# HTSeq vcf reader 18:57 - 21:13 15951727 SNPs found in 92510146 vcf records - 2 hours and 15 minutes
+# fast vcf reader  21:22 - 21:47 15955367 Polymorphisms selected in 92510146 vcf records. - 25 minutes
+# bed read 21:53 - 21:54 - 1 minute only
+# GFT read 21:54 - 21:55 - 1 minute only
+# BAM proc 21:55 - 22:32 - 37 minutes
+# 33874599 alignments  processed.
+# Polymorphism report: 3398038 assigned: 3391962 reference / 6076 alternate, 5433209 alleles unassigned of 8831247 tested.
+
+# Reference genome fasts N-masking:
+# python3 allelic_count.py --genome-nmask --genome-fasta-filename=/home/linux/RNAseq/Mus_musculus.GRCm38.68.dna.toplevel.fa/Mus_musculus.GRCm38.68.dna.chromosome.1.fa --genome-nmask-filename=Mus_musculus.GRCm38.68.dna.chromosome.N_masked.fa --SNP-vcf-filename=/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf --SNP-vcf-file-offset=1 None None
+
 import sys
 import argparse
 import operator
@@ -12,8 +100,6 @@ import random
 
 import HTSeq
 
-VCF_FILENAME = "/home/linux/RNAseq/mgp_REL2005_snps_indels.vcf"
-BED_FILENAME = "/home/linux/RNAseq/SNPs.bed"
 
 base2shft = {"A": 6, "C": 4, "G": 2, "T": 0}
 
@@ -546,7 +632,9 @@ def count_reads_in_features(
         allele_counts,                           # <--------------------------allelic analysis
         SNPs,
         snp_min_qual,
-        add_chromosome_information,
+        add_genome_annotation,
+        gtf_file_offset,
+        gtf_file_end_not_included,
         ):
     '''Count reads in features, parallelizing by file'''
 
@@ -595,9 +683,13 @@ def count_reads_in_features(
 
     if feature_query is not None:
         feature_qdic = parse_feature_query(feature_query)
-    features = HTSeq.GenomicArrayOfSets("auto", stranded != "no")
-    gff = HTSeq.GFF_Reader(gff_filename)
+    features = HTSeq.GenomicArrayOfSets("auto", stranded != "no") # ----- features GENOME ANNOTATION of exons ------ <<<<<<<<<<<<<<<<
+    if gtf_file_end_not_included:
+        gff = HTSeq.GFF_Reader(gff_filename, end_included=False)
+    else:
+        gff = HTSeq.GFF_Reader(gff_filename)
     attributes = {}
+    gene_info = {}   # for annotation of genes -----------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     i = 0
     try:
         for f in gff:
@@ -622,16 +714,56 @@ def count_reads_in_features(
                     # from the query (e.g. other genes)
                     if f.attr[feature_qdic['attr_cat']] != feature_qdic['attr_name']:
                         continue
-
-                features[f.iv] += feature_id
-                if add_chromosome_information:
-                    attributes[feature_id] = [f.iv.chrom] + [f.attr[attr] if attr in f.attr else '' for attr in additional_attributes]
+                if gtf_file_offset == 1:
+                    features[f.iv] += feature_id
                 else:
-                    attributes[feature_id] = [f.attr[attr] if attr in f.attr else '' for attr in additional_attributes]
+                    offset = 1 - gtf_file_offset
+                    if f.iv.start >= offset:
+                        f.iv.start = f.iv.start - offset
+                    if f.iv.end >= offset:
+                        f.iv.end = f.iv.end - offset
+                attributes[feature_id] = [f.attr[attr] if attr in f.attr else '' for attr in additional_attributes]
+                if "chrom" in add_genome_annotation or "gene_length" in add_genome_annotation:
+                    # UPDATE START AND END OF GENE
+                    if feature_id in gene_info.keys():
+                        if gene_info[feature_id].chrom == f.iv.chrom:
+                            if gene_info[feature_id].strand == f.iv.strand:
+                                if gene_info[feature_id].start > f.iv.start:
+                                    gene_info[feature_id].start = f.iv.start
+                                if gene_info[feature_id].end < f.iv.end:
+                                    gene_info[feature_id].end = f.iv.end
+                            else:
+                                print("Ambiguous strand information for", feature_id, "encountered. Discarding exon information.")
+                        else:
+                            print("Ambibugous chromosome definition for", feature_id, "encountered. Discarding exon information.")
+                    else:
+                        gene_info[feature_id] = f.iv
             i += 1
             if i % 100000 == 0 and not quiet:
                 sys.stderr.write("%d GFF lines processed.\n" % i)
                 sys.stderr.flush()
+        # CALCULATE EXON LENGTH HERE !!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        if "exon_length" in add_genome_annotation:
+            exon_length = {}
+            for iv,feature_ids in features.steps():
+                for feature_id in feature_ids:
+                    if feature_id in exon_length.keys():
+                        exon_lenth[feature_id] += iv.end-iv.start
+                    else:
+                        exon_length[feature_id] = iv.end-iv.start
+        # CALCULATE GENE LENGTH FROM START AND END AND STORE IN ATTRIBUTES
+        if len(add_genome_annotation) > 0:
+            for feature_id in attributes.keys():
+                annotation = []
+                if "chrom" in add_genome_annotation:
+                    annotation = [gene_info[feature_id].chrom, gene_info[feature_id].start, gene_info[feature_id].end, gene_info[feature_id].strand]
+                if "gene_length" in add_genome_annotation:
+                    gene_length = gene_info[feature_id].end - gene_info[feature_id].start
+                    annotation.append(gene_length)
+                if "exon_length" in add_genome_annotation:
+                    annotation.append(exon_length[feature_id])
+                attributes[feature_id] = annotation + attributes[feature_id]
+
     except:
         sys.stderr.write(
             "Error occured when processing GFF file (%s):\n" %
@@ -718,8 +850,20 @@ def count_reads_in_features(
 
 def load_genome_fasta(fasta_filename):
     genome=HTSeq.FastaReader(fasta_filename)
-    chromosome={ str(i.name): i.seq for i in genome }
+    chromosome={ str(i.name): bytearray(i.seq) for i in genome }
     return chromosome
+
+def write_genome_fasta(chromosome, fasta_filename):
+    n = 0
+    try:
+        with open(fasta_filename, "w") as fasta_file:
+            for chrom in chromosome.keys():
+                s = HTSeq.Sequence(bytes(chromosome[chrom]), chrom)
+                s.write_to_fasta_file(fasta_file)
+                n+=1
+        print(n, "sequence records written to", fasta_filename)
+    except IOError:
+        print("Error when attempting to write", n, "sequence record to", fasta_filename)
 
 def vcf_direct(vcf_filename, chromosome):
     f=open(VCF_FILENAME, "r")
@@ -936,6 +1080,92 @@ def consistency_check(fasta_filename, vcf_filename, vcf_file_offset, gtf_filenam
             if os.path.exists(bam_filename):
                 check_bam_file(bam_filename, chromosome, test_num=test_num)
 
+# ==============================================================================================================================================================================================================================================================
+
+def nmask_genome(fasta_filename, nmask_filename, vcf_filename, ref_samples, alt_samples, omit_ref_genome=False, vcf_file_offset=1, silent=False):  
+    # nmask_genome(args.genome_fasta_filename, args.genome_nmask_filename, args.vcf_filename, args.ref_samples, args.alt_samples, omit_ref_genome=args.omit_ref_genome, vcf_file_offset=args.vcf_file_offset, silent=args.quiet)
+    print("N-mask genome")
+    print("Reading genome fasta file", fasta_filename)
+    if os.path.exists(fasta_filename):
+        chromosome=load_genome_fasta(fasta_filename)
+        for c in chromosome.keys():
+            print("Chromosome", c, ":", len(chromosome[c]), "basepairs")
+    else:
+        print("FASTA file for reference genome not found. Use --genome-fasta-filename to specify the path to the FASTA file with the reference genome.")
+        sys.exit()
+    if vcf_filename is not None and os.path.exists(vcf_filename):
+        with open(vcf_filename) as vcf_file:
+            if not silent:
+                print("Reading polymorphism information from VCF file:", vcf_filename)
+                print("Using genomic position offset", vcf_file_offset)
+            gt_idx=0
+            fi_idx=-1
+            n=0
+            bases_changed=0
+            bases_N=0
+            for line in vcf_file:
+                line=line.strip()
+                if len(line) < 2:
+                    continue
+                elif line[0]=="#":
+                    if line[1]=="#":            # meta lines
+                        if not silent:
+                            print(line)
+                    else:                       # header line
+                        header={e:n for n,e in enumerate(line[1:].split("\t"))} # dictionary field name to index
+                        if not silent:
+                            print("HEADER -> data field index\n","\n".join([k+":"+str(header[k]) for k in header.keys()]))
+                else:                           # data lines
+                    data_fields=line.split("\t")
+                    if data_fields[header["FORMAT"]][:2]!="GT" or data_fields[header["FORMAT"]][-2:]!="FI":
+                        frmt_fields = data_fields[header["FORMAT"]].split(":")
+                        gt_idx = frmt_fields.index("GT")
+                        fi_idx = frmt_fields.index("FI")
+                    allele_sequences = [ data_fields[header["REF"]] ] + data_fields[header["ALT"]].split(",")
+                    ref_alleles=set([allele_sequences[int(gl[0])] for gl in [ sample_data[gt_idx].replace("|","/").split("/") for sample_data in [ data_fields[header[sample]].split(":") for sample in ref_samples ] if sample_data[fi_idx]=="1" ] if len(set(gl))==1 and gl[0]!="." and len(allele_sequences[int(gl[0])]) == 1])
+                    if not omit_ref_genome and data_fields[header["FILTER"]] == "PASS" and len(data_fields[header["REF"]]) == 1:
+                        ref_alleles |= { data_fields[header["REF"]] }
+                    alt_alleles=set([allele_sequences[int(gl[0])] for gl in [ sample_data[gt_idx].replace("|","/").split("/") for sample_data in [ data_fields[header[sample]].split(":") for sample in alt_samples ] if sample_data[fi_idx]=="1" ] if len(set(gl))==1 and gl[0]!="." and len(allele_sequences[int(gl[0])]) == 1])
+                    # here we need to mask the genome with ref_alleles and alt_alleles containing sets with the bases
+                    # first if there is any difference between ref and alt or ref and the reference genome then the base goes to N
+                    # check if the ref_allele is actually correct in the genome else write a warning
+                    chrom = data_fields[header["CHROM"]]
+                    pos = int(data_fields[header["POS"]]) - vcf_file_offset
+                    vcf_ref = data_fields[header["REF"]]
+                    if len(vcf_ref)==1 and all([len(e)==1 for e in list(ref_alleles)+list(alt_alleles)]):                    # only use SNPs
+                        genome_ref = chr(chromosome[chrom][pos])
+                        """if genome_ref != vcf_ref:
+                            print("Warning: Chrom %s position %d VCF ref <%s> mismatches genome reference chrom %s position %d <%s>, %d bases changed. %d N-masked" % (chrom, pos+vcf_file_offset, vcf_ref, chrom, pos, genome_ref, bases_changed, bases_N) )
+                        else:
+                            print("Chrom %s pos %d VCF natches genome ref <%s>." % (chrom, pos, genome_ref) )
+                        # if vcf ref and alt alleles are the same and different from genome ref then and only then use the vcf base for the genome position."""
+                        if len(ref_alleles)==1 and ref_alleles == alt_alleles:
+                            # ref and alt allele are the very same base - so change the genome to this base if different from the genome reference base
+                            new_base = ref_alleles.pop()
+                            if genome_ref != new_base:
+                                print("CHR %s pos %d relacing %s with %s", chrom, pos, genome_ref, new_base)
+                                chromosome[chrom][pos] = ord(new_base)
+                                bases_changes+=1
+                            # else ref and alt allele are the same as the genome reference base and nothing should be done!
+                        else:
+                            chromosome[chrom][pos] = ord(b"N")  # we use bytearray but this works with bytes strings: chromosomes[chrom] = chromosomes[chrom][:pos] + b"N" + chromosomes[chrom][pos+1:]
+                            bases_N+=1
+                    n+=1
+                    if not silent:
+                        if n % 1000000 == 0:
+                            print(n, "vcf records processed,", bases_changed, "bases changed,", bases_N, "N-masked.")
+        if not silent:
+            print(n,"vcf records processed.")
+            print(bases_changed, "bases changed in reference genome.")
+            print(bases_N, "bases N-masked in reference genome.")
+            print(bases_changed+bases_N, "total changes made to reference genome.")
+        write_genome_fasta(chromosome, nmask_filename)
+    else:
+        print("VCF file for polymorphisms not found. Use --SNP-vcf-filename to specify the path to the VCF file with the SNP information.")
+        sys.exit()
+
+# ==============================================================================================================================================================================================================================================================
+
 def my_showwarning(message, category, filename, lineno=None, file=None,
                    line=None):
     sys.stderr.write("Warning: %s\n" % message)
@@ -1115,7 +1345,15 @@ def main():
 
     pa.add_argument(
             "--add-chromosome-information", action="store_true", dest="add_chromosome_information",
-            help="include chromosome information in output")
+            help="include chromosome information (chromosome, start, and end genomic position, and strand) in output")
+
+    pa.add_argument(
+            "--add-genelength-information", action="store_true", dest="add_genelength_information",
+            help="include gene locus length information in output (basepairs from start of first to end of last exon)")
+
+    pa.add_argument(
+            "--add-exonlength-information", action="store_true", dest="add_exonlength_information",
+            help="include information of the length of all exons of a gene superimposed in output for calculating RKM and TPM")
 
     pa.add_argument(
             "--SNP-min-base-qual", type=int, dest="snp_min_qual",
@@ -1216,7 +1454,7 @@ def main():
             '--genome-fasta-filename', type=str, dest='genome_fasta_filename',
             default='',
             help="Filename of a FASTA file with the reference genome. Note that chromosome names and genomic positions must match with that of BAM, GTF, and VCF files. " +
-            "This file is only used if a consistency check is performed using option --check-consistency."
+            "This file is  used if a consistency check is performed using option --check-consistency or if an N-masked genome is generated with --genome-nmask."
             )
 
     pa.add_argument(
@@ -1225,6 +1463,42 @@ def main():
             help="Maximal number of tests sampled from each file for performing a consistency test. " +
             "The default is 10000. If a large number is specified the actual tests might be limited by the data. " +
             "Use with --check-consistency for validation of genomic coordinates for your VCF, GTF, and BAM files."
+            )
+
+    # N-MASK GENOME IMPLEMENTED ======================================================================================
+    
+    pa.add_argument(
+            "--genome-nmask", action="store_true", dest="genome_nmask",
+            help="Produce an N-masked genome for the input genme FASTA file given by --genome-fasta-filename usinf either " +
+            "a VCF file given by --SNP-vcf-filename or a BED file given by --SNP-bed-filename. The resulting N-masked " +
+            "genome is stored output to a FASTA file given by --genome-nmask-filename. " +
+            "Note that chromosome names and genomic positions must match in the genome FASTA and VCF input files."
+            )
+
+    pa.add_argument(
+            '--genome-nmask-filename', type=str, dest='genome_nmask_filename',
+            default='',
+            help="Filename of a FASTA file to which the N-masked geneome will be stored.with the reference genome. " +
+            "Note that chromosome names and genomic positions must match in the genome FASTA and VCF input files."
+            )
+
+
+    # ================================================================================================================
+
+    pa.add_argument(
+            "--GTF-file-offset", type=int, dest="gtf_file_offset",
+            default=1,
+            help="Force a specific offset for the genomic position of the first basepair for the GTF genomic feature file " +
+            "specified as the last paramter on the command line. The default is 1 (--GTF_file-offset=1). If in doubt use " +
+            "--check-consistency for perfoming a validation of genomic coordinates for your GTF genomic feature file."
+            )
+
+    pa.add_argument(
+            "--GTF-file-end-not-included", action="store_true", dest="gtf_file_end_not_included",
+            help="This is a flag that can be used for a GFF/GTF file with intervals where the end is not included. " +
+            "The default is a ( ] interval where the end position is the index after the last position of the interval. " +
+            "This corresponds to end_included and can be overridden using --GTF-file-end-not-included. If in doubt use " +
+            "--check-consistency for perfoming a validation of genomic intervals for your GTF genomic feature file."
             )
 
     args = pa.parse_args()
@@ -1278,10 +1552,22 @@ def main():
             sys.exit()
     else:
         SNPs = 0                                        # this is just a dummy value to pass as parameter
-    
+
+    if args.genome_nmask:
+        nmask_genome(args.genome_fasta_filename, args.genome_nmask_filename, args.vcf_filename, args.ref_samples, args.alt_samples, omit_ref_genome=args.omit_ref_genome, vcf_file_offset=args.vcf_file_offset, silent=args.quiet)
+        sys.exit()
+        
+    add_genome_annotation = []
+    if args.add_chromosome_information:
+        add_genome_annotation.append("chrom")
+    if args.add_genelength_information:
+        add_genome_annotation.append("gene_length")
+    if args.add_exonlength_information:
+        add_genome_annotation.append("exon_length")
+
     warnings.showwarning = my_showwarning
     try:
-    count_reads_in_features(
+        count_reads_in_features(
             args.samfilenames,
             args.featuresfilename,
             args.order,
@@ -1306,7 +1592,9 @@ def main():
             args.allele_counts,    # <------------------------------------------------- allelic analysis
             SNPs,
             args.snp_min_qual,
-            args.add_chromosome_information,
+            args.add_genome_annotation,
+            args.gtf_file_offset,
+            args.gtf_file_end_not_included,
             )
     except:
         sys.stderr.write("  %s\n" % str(sys.exc_info()[1]))
